@@ -88,7 +88,7 @@ ULSError uls_find_devices(ULSDeviceInfo **devices, int *count) {
     CFRelease(vendorIdRef);
 
     /* Get matching services */
-    kr = IOServiceGetMatchingServices(kIOMasterPortDefault, matchingDict, &iter);
+    kr = IOServiceGetMatchingServices(kIOMainPortDefault, matchingDict, &iter);
     if (kr != KERN_SUCCESS) {
         return ULS_ERROR_NOT_FOUND;
     }
@@ -206,7 +206,7 @@ ULSDevice* uls_open_device(uint16_t vendorId, uint16_t productId) {
     CFRelease(productIdRef);
 
     /* Get matching services */
-    kr = IOServiceGetMatchingServices(kIOMasterPortDefault, matchingDict, &iter);
+    kr = IOServiceGetMatchingServices(kIOMainPortDefault, matchingDict, &iter);
     if (kr != KERN_SUCCESS) {
         return NULL;
     }
@@ -837,7 +837,7 @@ ULSError uls_register_hotplug_callback(ULSDeviceCallback callback, void *userCon
     gHotplugCallback = callback;
     gHotplugUserContext = userContext;
 
-    gNotifyPort = IONotificationPortCreate(kIOMasterPortDefault);
+    gNotifyPort = IONotificationPortCreate(kIOMainPortDefault);
     if (gNotifyPort == NULL) {
         return ULS_ERROR_UNKNOWN;
     }

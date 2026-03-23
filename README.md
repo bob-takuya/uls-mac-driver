@@ -185,16 +185,20 @@ uls_printer_settings_destroy(loaded);
 ```
 uls-mac-driver/
 ├── include/
-│   ├── uls_usb.h      # USB communication API
-│   └── uls_job.h      # Job processing API
+│   ├── uls_usb.h          # USB communication API
+│   └── uls_job.h          # Job processing API
 ├── src/
-│   ├── uls_usb.c      # USB implementation
-│   ├── uls_job.c      # Job processing implementation
-│   ├── uls_cli.c      # Command-line interface
-│   ├── test_uls.c     # Test suite
-│   ├── main.m         # App entry point
+│   ├── uls_usb.c          # USB implementation (IOKit)
+│   ├── uls_job.c          # Job processing implementation
+│   ├── uls_cli.c          # Command-line interface
+│   ├── test_uls.c         # Test suite
+│   ├── main.m             # App entry point
 │   ├── ULSAppDelegate.h/m
-│   └── ULSMainWindowController.h/m
+│   ├── ULSMainWindowController.h/m
+│   ├── ULSSVGParser.h/m   # SVG import (all path commands)
+│   └── ULSPDFParser.h/m   # PDF import (Quartz CGPDFDocument)
+├── scripts/
+│   └── gen_icon.py        # App icon generator (no deps)
 ├── Makefile
 └── README.md
 ```
@@ -238,12 +242,61 @@ Jobs are compiled to a binary format:
 
 ## License
 
-This project is for educational and research purposes. Use at your own risk.
-The original Windows driver is copyright Universal Laser Systems, Inc.
+### This Project
 
-## Disclaimer
+Copyright (c) 2026 Contributors
 
-This is an unofficial, reverse-engineered driver. It is not endorsed by or
-affiliated with Universal Laser Systems, Inc. Use of this software may void
-your warranty. The authors are not responsible for any damage to equipment
-or injury that may result from using this software.
+Permission is hereby granted, free of charge, to any person obtaining a copy
+of this software and associated documentation files (the "Software"), to deal
+in the Software without restriction, including without limitation the rights
+to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+copies of the Software, and to permit persons to whom the Software is
+furnished to do so, subject to the following conditions:
+
+The above copyright notice and this permission notice shall be included in all
+copies or substantial portions of the Software.
+
+**THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+SOFTWARE.**
+
+This project is licensed under the **MIT License**.
+
+### Third-Party Rights
+
+- **Universal Laser Systems, Inc.** — ULS, PLS, VLS, and ILS are trademarks of
+  Universal Laser Systems, Inc. The ULS USB protocol was determined by
+  observation and is not based on any proprietary source code or documentation.
+  This project is **not affiliated with, endorsed by, or supported by** Universal
+  Laser Systems, Inc.
+
+- **Apple, Inc.** — macOS, IOKit, PDFKit, Quartz, Cocoa, and related frameworks
+  are property of Apple Inc. Use of these frameworks is subject to Apple's
+  developer license terms.
+
+- **PDF format** — The Portable Document Format (PDF) is an open ISO standard
+  (ISO 32000). PDF parsing in this project uses Apple's `Quartz` framework only
+  (no third-party PDF libraries).
+
+### Disclaimer
+
+This is an unofficial, community-developed driver. It is **not endorsed by or
+affiliated with Universal Laser Systems, Inc.** Use of this software:
+
+- May void your device warranty
+- Is entirely at your own risk
+- Is not a substitute for proper training and safety procedures
+
+The authors and contributors accept **no liability** for any damage to equipment,
+data loss, personal injury, or any other harm resulting from the use of this
+software. Always follow the safety guidelines provided by the manufacturer of
+your laser cutter.
+
+> **⚠️ Safety Notice:** Laser cutters are Class 4 laser devices. Improper
+> operation can cause serious injury, fire, or death. Always operate within a
+> properly ventilated enclosure, wear appropriate eye protection, and comply with
+> all applicable local regulations.

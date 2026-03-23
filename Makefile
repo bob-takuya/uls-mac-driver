@@ -6,7 +6,7 @@ CC = clang
 OBJC = clang
 CFLAGS = -Wall -Wextra -O2 -g -I./include
 OBJCFLAGS = -Wall -Wextra -O2 -g -I./include -fobjc-arc
-FRAMEWORKS = -framework Cocoa -framework IOKit -framework CoreFoundation -framework UniformTypeIdentifiers -framework QuartzCore
+FRAMEWORKS = -framework Cocoa -framework IOKit -framework CoreFoundation -framework UniformTypeIdentifiers -framework QuartzCore -framework Quartz -framework PDFKit
 
 # Directories
 SRC_DIR = src
@@ -19,7 +19,7 @@ RESOURCES_DIR = $(CONTENTS_DIR)/Resources
 
 # Source files
 C_SOURCES = $(SRC_DIR)/uls_usb.c $(SRC_DIR)/uls_job.c
-OBJC_SOURCES = $(SRC_DIR)/main.m $(SRC_DIR)/ULSAppDelegate.m $(SRC_DIR)/ULSMainWindowController.m $(SRC_DIR)/ULSSVGParser.m
+OBJC_SOURCES = $(SRC_DIR)/main.m $(SRC_DIR)/ULSAppDelegate.m $(SRC_DIR)/ULSMainWindowController.m $(SRC_DIR)/ULSSVGParser.m $(SRC_DIR)/ULSPDFParser.m
 
 # Object files
 C_OBJECTS = $(patsubst $(SRC_DIR)/%.c,$(BUILD_DIR)/%.o,$(C_SOURCES))
@@ -119,9 +119,12 @@ $(CONTENTS_DIR)/Info.plist: | $(CONTENTS_DIR)
 $(CONTENTS_DIR):
 	mkdir -p $(CONTENTS_DIR)
 
-# Placeholder icon (in real app, use proper icon file)
-$(RESOURCES_DIR)/AppIcon.icns: | $(RESOURCES_DIR)
-	@touch $@
+# Generate app icon using Python (no Xcode asset catalog required)
+$(RESOURCES_DIR)/AppIcon.icns: scripts/gen_icon.py | $(RESOURCES_DIR)
+	@echo "Generating app icon..."
+	@python3 scripts/gen_icon.py $(BUILD_DIR)/AppIcon.iconset
+	@iconutil -c icns $(BUILD_DIR)/AppIcon.iconset -o $@
+	@echo "App icon generated."
 
 # Command line tool
 cli: $(CLI_TARGET)

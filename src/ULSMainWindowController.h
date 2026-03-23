@@ -55,6 +55,10 @@
 // UI Elements - Jog
 @property (strong, nonatomic) NSPopUpButton *jogDistancePopup;
 
+// UI Elements - Focus / Z-Axis
+@property (strong, nonatomic) NSSlider *focusOffsetSlider;
+@property (strong, nonatomic) NSTextField *focusOffsetLabel;
+
 // Actions
 - (IBAction)connectLaser:(id)sender;
 - (IBAction)disconnectLaser:(id)sender;
@@ -103,5 +107,8 @@
 
 // Jog distance
 - (IBAction)jogDistanceChanged:(id)sender;
+
+// Focus / Z-Axis
+- (IBAction)focusOffsetChanged:(id)sender;
 
 @end
