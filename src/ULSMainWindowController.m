@@ -6,6 +6,7 @@
 
 #import "ULSMainWindowController.h"
 #import "ULSSVGParser.h"
+#import "ULSPDFParser.h"
 #import <UniformTypeIdentifiers/UniformTypeIdentifiers.h>
 
 // Helper macro for Auto Layout
@@ -668,6 +669,10 @@ typedef NS_ENUM(NSInteger, ULSOperationState) {
     [sections addObject:[self buildJogSection]];
     [sections addObject:[self makeSeparator]];
 
+    // 3b. Focus / Z-Axis
+    [sections addObject:[self buildFocusSection]];
+    [sections addObject:[self makeSeparator]];
+
     // 4. Settings
     [sections addObject:[self buildSettingsSection]];
     [sections addObject:[self makeSeparator]];
@@ -786,6 +791,67 @@ typedef NS_ENUM(NSInteger, ULSOperationState) {
     ALOFF(jogGrid);
 
     NSStackView *stack = [NSStackView stackViewWithViews:@[title, stepRow, jogGrid]];
+    stack.orientation = NSUserInterfaceLayoutOrientationVertical;
+    stack.alignment = NSLayoutAttributeLeading;
+    stack.spacing = 6;
+    ALOFF(stack);
+    return stack;
+}
+
+#pragma mark - Focus / Z-Axis Section
+
+- (NSView *)buildFocusSection {
+    NSTextField *title = [self makeBoldLabel:@"Focus / Z-Axis"];
+
+    // Focus offset slider: -0.5" to +0.5"
+    NSTextField *offsetTitle = [self makeLabel:@"Focus Offset:"];
+    self.focusOffsetSlider = [[NSSlider alloc] init];
+    self.focusOffsetSlider.minValue = -50;  // stored as 1/100 inch
+    self.focusOffsetSlider.maxValue = 50;
+    self.focusOffsetSlider.intValue = 0;
+    self.focusOffsetSlider.continuous = YES;
+    self.focusOffsetSlider.target = self;
+    self.focusOffsetSlider.action = @selector(focusOffsetChanged:);
+    ALOFF(self.focusOffsetSlider);
+    [self.focusOffsetSlider.widthAnchor constraintGreaterThanOrEqualToConstant:120].active = YES;
+
+    self.focusOffsetLabel = [[NSTextField alloc] init];
+    self.focusOffsetLabel.floatValue = 0.0f;
+    self.focusOffsetLabel.font = [NSFont systemFontOfSize:12];
+    self.focusOffsetLabel.alignment = NSTextAlignmentRight;
+    self.focusOffsetLabel.target = self;
+    self.focusOffsetLabel.action = @selector(focusOffsetFieldChanged:);
+    ALOFF(self.focusOffsetLabel);
+    [self.focusOffsetLabel.widthAnchor constraintEqualToConstant:45].active = YES;
+
+    NSTextField *inLabel = [self makeLabel:@"in"];
+
+    NSStackView *sliderRow = [NSStackView stackViewWithViews:@[offsetTitle, self.focusOffsetSlider, self.focusOffsetLabel, inLabel]];
+    sliderRow.orientation = NSUserInterfaceLayoutOrientationHorizontal;
+    sliderRow.spacing = 4;
+    ALOFF(sliderRow);
+
+    // Set Focus button
+    NSButton *setFocusBtn = [self makeButton:@"Set Focus" action:@selector(setFocus:)];
+
+    // Material thickness helper
+    NSTextField *thickLabel = [self makeLabel:@"Material Thickness:"];
+    NSTextField *thickField = [[NSTextField alloc] init];
+    thickField.floatValue = 0.125f;
+    thickField.font = [NSFont systemFontOfSize:12];
+    thickField.alignment = NSTextAlignmentRight;
+    thickField.target = self;
+    thickField.action = @selector(materialThicknessChanged:);
+    ALOFF(thickField);
+    [thickField.widthAnchor constraintEqualToConstant:45].active = YES;
+    NSTextField *inLabel2 = [self makeLabel:@"in"];
+
+    NSStackView *thickRow = [NSStackView stackViewWithViews:@[thickLabel, thickField, inLabel2]];
+    thickRow.orientation = NSUserInterfaceLayoutOrientationHorizontal;
+    thickRow.spacing = 4;
+    ALOFF(thickRow);
+
+    NSStackView *stack = [NSStackView stackViewWithViews:@[title, sliderRow, setFocusBtn, thickRow]];
     stack.orientation = NSUserInterfaceLayoutOrientationVertical;
     stack.alignment = NSLayoutAttributeLeading;
     stack.spacing = 6;
@@ -1637,16 +1703,7 @@ typedef NS_ENUM(NSInteger, ULSOperationState) {
     if ([ext isEqualToString:@"svg"]) {
         err = [ULSSVGParser parseFile:path intoJob:self.currentJob];
     } else if ([ext isEqualToString:@"pdf"]) {
-        // PDF import not yet fully implemented
-        NSAlert *alert = [[NSAlert alloc] init];
-        alert.messageText = @"PDF Import";
-        alert.informativeText = @"PDF import is not yet fully implemented. Please use SVG format for vector designs.";
-        [alert addButtonWithTitle:@"OK"];
-        [alert runModal];
-        uls_job_destroy(self.currentJob);
-        self.currentJob = NULL;
-        [self updateUIState];
-        return;
+        err = [ULSPDFParser parseFile:path pageNumber:0 intoJob:self.currentJob];
     } else {
         err = ULS_ERROR_INVALID_PARAM;
     }
@@ -1769,6 +1826,64 @@ typedef NS_ENUM(NSInteger, ULSOperationState) {
         float newY = y + _jogDistance;
         uls_move_to(self.device, x, newY);
         [self updateToolPositionDisplay:x y:newY];
+    }
+}
+
+#pragma mark - Focus / Z-Axis Actions
+
+- (IBAction)focusOffsetChanged:(id)sender {
+    float offset = self.focusOffsetSlider.intValue / 100.0f;
+    self.focusOffsetLabel.floatValue = offset;
+    if (self.printerSettings) {
+        self.printerSettings->focusOffset = offset;
+    }
+}
+
+- (IBAction)focusOffsetFieldChanged:(id)sender {
+    float offset = self.focusOffsetLabel.floatValue;
+    if (offset < -0.5f) offset = -0.5f;
+    if (offset > 0.5f)  offset = 0.5f;
+    self.focusOffsetLabel.floatValue = offset;
+    self.focusOffsetSlider.intValue = (int)(offset * 100);
+    if (self.printerSettings) {
+        self.printerSettings->focusOffset = offset;
+    }
+}
+
+- (IBAction)setFocus:(id)sender {
+    if (!self.device || !self.isConnected || _operationState != ULSOperationStateIdle) return;
+
+    float offset = self.focusOffsetSlider.intValue / 100.0f;
+    // Z is passed as the third component; ULS devices interpret this as focus offset
+    // We use uls_move_to with current XY and Z encoded in a control transfer
+    // For now, store in printer settings and apply to next job
+    if (self.printerSettings) {
+        self.printerSettings->focusOffset = offset;
+        self.printerSettings->materialThickness = self.printerSettings->materialThickness; // unchanged
+    }
+
+    NSAlert *alert = [[NSAlert alloc] init];
+    alert.messageText = @"Focus Set";
+    alert.informativeText = [NSString stringWithFormat:@"Focus offset set to %.3f inches.\nThis will be applied to the next job.", offset];
+    [alert addButtonWithTitle:@"OK"];
+    [alert runModal];
+}
+
+- (IBAction)materialThicknessChanged:(id)sender {
+    NSTextField *field = (NSTextField *)sender;
+    float thickness = field.floatValue;
+    if (thickness < 0) thickness = 0;
+    if (thickness > 4.0f) thickness = 4.0f;
+    field.floatValue = thickness;
+
+    if (self.printerSettings) {
+        self.printerSettings->materialThickness = thickness;
+        // Auto-set focus offset to half the material thickness (standard for cutting)
+        float autoOffset = thickness / 2.0f;
+        if (autoOffset > 0.5f) autoOffset = 0.5f;
+        self.printerSettings->focusOffset = autoOffset;
+        self.focusOffsetSlider.intValue = (int)(autoOffset * 100);
+        self.focusOffsetLabel.floatValue = autoOffset;
     }
 }
 
