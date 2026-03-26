@@ -1,0 +1,313 @@
+*PPD-Adobe: "4.3"
+*%
+*% PPD file for ULS VLS 6.0 Laser Cutter
+*% For use with the ULS CUPS backend
+*%
+*% Copyright (c) 2026 Contributors - MIT License
+*%
+
+*FormatVersion: "4.3"
+*FileVersion: "1.0"
+*LanguageVersion: English
+*LanguageEncoding: ISOLatin1
+*PCFileName: "ULSVLS60.PPD"
+*Manufacturer: "ULS"
+*Product: "(ULS VLS 6.0)"
+*ModelName: "ULS VLS 6.0"
+*ShortNickName: "ULS VLS 6.0"
+*NickName: "ULS VLS 6.0 Laser Cutter"
+*PSVersion: "(3010.000) 0"
+*LanguageLevel: "3"
+*ColorDevice: True
+*DefaultColorSpace: RGB
+*FileSystem: False
+*Throughput: "1"
+*TTRasterizer: Type42
+*cupsVersion: 2.0
+*cupsModelNumber: 60
+*cupsManualCopies: False
+*cupsFilter: "application/pdf 0 uls"
+
+*% ======== Basic Device Capabilities ========
+
+*OpenUI *PageSize/Page Size: PickOne
+*OrderDependency: 10 AnySetup *PageSize
+*DefaultPageSize: Letter
+*PageSize Letter/Letter (8.5 x 11 in): "<</PageSize[612 792]/ImagingBBox null>>setpagedevice"
+*PageSize Legal/Legal (8.5 x 14 in): "<</PageSize[612 1008]/ImagingBBox null>>setpagedevice"
+*PageSize A4/A4 (210 x 297 mm): "<</PageSize[595 842]/ImagingBBox null>>setpagedevice"
+*PageSize Tabloid/Tabloid (11 x 17 in): "<</PageSize[792 1224]/ImagingBBox null>>setpagedevice"
+*PageSize VLS6x12/VLS 6.0 Field (24 x 12 in): "<</PageSize[1728 864]/ImagingBBox null>>setpagedevice"
+*PageSize VLS6x18/VLS Extended Field (32 x 18 in): "<</PageSize[2304 1296]/ImagingBBox null>>setpagedevice"
+*CloseUI: *PageSize
+
+*OpenUI *PageRegion: PickOne
+*OrderDependency: 10 AnySetup *PageRegion
+*DefaultPageRegion: Letter
+*PageRegion Letter/Letter (8.5 x 11 in): "<</PageSize[612 792]/ImagingBBox null>>setpagedevice"
+*PageRegion Legal/Legal (8.5 x 14 in): "<</PageSize[612 1008]/ImagingBBox null>>setpagedevice"
+*PageRegion A4/A4 (210 x 297 mm): "<</PageSize[595 842]/ImagingBBox null>>setpagedevice"
+*PageRegion Tabloid/Tabloid (11 x 17 in): "<</PageSize[792 1224]/ImagingBBox null>>setpagedevice"
+*PageRegion VLS6x12/VLS 6.0 Field (24 x 12 in): "<</PageSize[1728 864]/ImagingBBox null>>setpagedevice"
+*PageRegion VLS6x18/VLS Extended Field (32 x 18 in): "<</PageSize[2304 1296]/ImagingBBox null>>setpagedevice"
+*CloseUI: *PageRegion
+
+*DefaultImageableArea: Letter
+*ImageableArea Letter/Letter (8.5 x 11 in): "0 0 612 792"
+*ImageableArea Legal/Legal (8.5 x 14 in): "0 0 612 1008"
+*ImageableArea A4/A4 (210 x 297 mm): "0 0 595 842"
+*ImageableArea Tabloid/Tabloid (11 x 17 in): "0 0 792 1224"
+*ImageableArea VLS6x12/VLS 6.0 Field (24 x 12 in): "0 0 1728 864"
+*ImageableArea VLS6x18/VLS Extended Field (32 x 18 in): "0 0 2304 1296"
+
+*DefaultPaperDimension: Letter
+*PaperDimension Letter/Letter (8.5 x 11 in): "612 792"
+*PaperDimension Legal/Legal (8.5 x 14 in): "612 1008"
+*PaperDimension A4/A4 (210 x 297 mm): "595 842"
+*PaperDimension Tabloid/Tabloid (11 x 17 in): "792 1224"
+*PaperDimension VLS6x12/VLS 6.0 Field (24 x 12 in): "1728 864"
+*PaperDimension VLS6x18/VLS Extended Field (32 x 18 in): "2304 1296"
+
+*% ======== Resolution ========
+
+*OpenUI *Resolution/Resolution: PickOne
+*OrderDependency: 20 AnySetup *Resolution
+*DefaultResolution: 1000dpi
+*Resolution 500dpi/500 DPI: "<</HWResolution[500 500]>>setpagedevice"
+*Resolution 1000dpi/1000 DPI: "<</HWResolution[1000 1000]>>setpagedevice"
+*CloseUI: *Resolution
+
+*% ======== Print Mode ========
+
+*OpenUI *PrintMode/Print Mode: PickOne
+*OrderDependency: 30 AnySetup *PrintMode
+*DefaultPrintMode: Normal
+*PrintMode Normal/Normal: ""
+*PrintMode Clipart/Clipart: ""
+*PrintMode 3D/3D Engraving: ""
+*PrintMode RubberStamp/Rubber Stamp: ""
+*CloseUI: *PrintMode
+
+*% ======== Image Density ========
+
+*OpenUI *ImageDensity/Image Density: PickOne
+*OrderDependency: 31 AnySetup *ImageDensity
+*DefaultImageDensity: 6
+*ImageDensity 1/Level 1 (Fastest): ""
+*ImageDensity 2/Level 2: ""
+*ImageDensity 3/Level 3: ""
+*ImageDensity 4/Level 4: ""
+*ImageDensity 5/Level 5: ""
+*ImageDensity 6/Level 6 (Standard): ""
+*ImageDensity 7/Level 7 (Dual Beam): ""
+*ImageDensity 8/Level 8 (Highest): ""
+*CloseUI: *ImageDensity
+
+*% ======== Gas Assist ========
+
+*OpenUI *GasAssist/Gas Assist: PickOne
+*OrderDependency: 32 AnySetup *GasAssist
+*DefaultGasAssist: Auto
+*GasAssist Auto/Automatic: ""
+*GasAssist Manual/Manual: ""
+*CloseUI: *GasAssist
+
+*% ======== Global Power Override ========
+
+*OpenUI *Power/Laser Power (%): PickOne
+*OrderDependency: 40 AnySetup *Power
+*DefaultPower: Default
+*Power Default/Use Pen Settings: ""
+*Power 10/10%: ""
+*Power 20/20%: ""
+*Power 30/30%: ""
+*Power 40/40%: ""
+*Power 50/50%: ""
+*Power 60/60%: ""
+*Power 70/70%: ""
+*Power 80/80%: ""
+*Power 90/90%: ""
+*Power 100/100%: ""
+*CloseUI: *Power
+
+*% ======== Global Speed Override ========
+
+*OpenUI *Speed/Laser Speed (%): PickOne
+*OrderDependency: 41 AnySetup *Speed
+*DefaultSpeed: Default
+*Speed Default/Use Pen Settings: ""
+*Speed 10/10%: ""
+*Speed 20/20%: ""
+*Speed 30/30%: ""
+*Speed 40/40%: ""
+*Speed 50/50%: ""
+*Speed 60/60%: ""
+*Speed 70/70%: ""
+*Speed 80/80%: ""
+*Speed 90/90%: ""
+*Speed 100/100%: ""
+*CloseUI: *Speed
+
+*% ======== Pen Color Settings - Black ========
+
+*OpenUI *PenBlackPower/Black Pen Power (%): PickOne
+*OrderDependency: 50 AnySetup *PenBlackPower
+*DefaultPenBlackPower: 50
+*PenBlackPower 10/10%: ""
+*PenBlackPower 20/20%: ""
+*PenBlackPower 30/30%: ""
+*PenBlackPower 40/40%: ""
+*PenBlackPower 50/50%: ""
+*PenBlackPower 60/60%: ""
+*PenBlackPower 70/70%: ""
+*PenBlackPower 80/80%: ""
+*PenBlackPower 90/90%: ""
+*PenBlackPower 100/100%: ""
+*CloseUI: *PenBlackPower
+
+*OpenUI *PenBlackSpeed/Black Pen Speed (%): PickOne
+*OrderDependency: 51 AnySetup *PenBlackSpeed
+*DefaultPenBlackSpeed: 50
+*PenBlackSpeed 10/10%: ""
+*PenBlackSpeed 20/20%: ""
+*PenBlackSpeed 30/30%: ""
+*PenBlackSpeed 40/40%: ""
+*PenBlackSpeed 50/50%: ""
+*PenBlackSpeed 60/60%: ""
+*PenBlackSpeed 70/70%: ""
+*PenBlackSpeed 80/80%: ""
+*PenBlackSpeed 90/90%: ""
+*PenBlackSpeed 100/100%: ""
+*CloseUI: *PenBlackSpeed
+
+*OpenUI *PenBlackMode/Black Pen Mode: PickOne
+*OrderDependency: 52 AnySetup *PenBlackMode
+*DefaultPenBlackMode: RastVect
+*PenBlackMode RastVect/Raster + Vector: ""
+*PenBlackMode Rast/Raster Only: ""
+*PenBlackMode Vect/Vector Only: ""
+*PenBlackMode Skip/Skip: ""
+*CloseUI: *PenBlackMode
+
+*% ======== Pen Color Settings - Red ========
+
+*OpenUI *PenRedPower/Red Pen Power (%): PickOne
+*OrderDependency: 53 AnySetup *PenRedPower
+*DefaultPenRedPower: 50
+*PenRedPower 10/10%: ""
+*PenRedPower 20/20%: ""
+*PenRedPower 30/30%: ""
+*PenRedPower 40/40%: ""
+*PenRedPower 50/50%: ""
+*PenRedPower 60/60%: ""
+*PenRedPower 70/70%: ""
+*PenRedPower 80/80%: ""
+*PenRedPower 90/90%: ""
+*PenRedPower 100/100%: ""
+*CloseUI: *PenRedPower
+
+*OpenUI *PenRedSpeed/Red Pen Speed (%): PickOne
+*OrderDependency: 54 AnySetup *PenRedSpeed
+*DefaultPenRedSpeed: 50
+*PenRedSpeed 10/10%: ""
+*PenRedSpeed 20/20%: ""
+*PenRedSpeed 30/30%: ""
+*PenRedSpeed 40/40%: ""
+*PenRedSpeed 50/50%: ""
+*PenRedSpeed 60/60%: ""
+*PenRedSpeed 70/70%: ""
+*PenRedSpeed 80/80%: ""
+*PenRedSpeed 90/90%: ""
+*PenRedSpeed 100/100%: ""
+*CloseUI: *PenRedSpeed
+
+*OpenUI *PenRedMode/Red Pen Mode: PickOne
+*OrderDependency: 55 AnySetup *PenRedMode
+*DefaultPenRedMode: Vect
+*PenRedMode RastVect/Raster + Vector: ""
+*PenRedMode Rast/Raster Only: ""
+*PenRedMode Vect/Vector Only: ""
+*PenRedMode Skip/Skip: ""
+*CloseUI: *PenRedMode
+
+*% ======== Pen Color Settings - Blue (Commonly used for cutting) ========
+
+*OpenUI *PenBluePower/Blue Pen Power (%): PickOne
+*OrderDependency: 60 AnySetup *PenBluePower
+*DefaultPenBluePower: 75
+*PenBluePower 10/10%: ""
+*PenBluePower 20/20%: ""
+*PenBluePower 30/30%: ""
+*PenBluePower 40/40%: ""
+*PenBluePower 50/50%: ""
+*PenBluePower 60/60%: ""
+*PenBluePower 70/70%: ""
+*PenBluePower 80/80%: ""
+*PenBluePower 90/90%: ""
+*PenBluePower 100/100%: ""
+*CloseUI: *PenBluePower
+
+*OpenUI *PenBlueSpeed/Blue Pen Speed (%): PickOne
+*OrderDependency: 61 AnySetup *PenBlueSpeed
+*DefaultPenBlueSpeed: 30
+*PenBlueSpeed 10/10%: ""
+*PenBlueSpeed 20/20%: ""
+*PenBlueSpeed 30/30%: ""
+*PenBlueSpeed 40/40%: ""
+*PenBlueSpeed 50/50%: ""
+*PenBlueSpeed 60/60%: ""
+*PenBlueSpeed 70/70%: ""
+*PenBlueSpeed 80/80%: ""
+*PenBlueSpeed 90/90%: ""
+*PenBlueSpeed 100/100%: ""
+*CloseUI: *PenBlueSpeed
+
+*OpenUI *PenBlueMode/Blue Pen Mode: PickOne
+*OrderDependency: 62 AnySetup *PenBlueMode
+*DefaultPenBlueMode: Vect
+*PenBlueMode RastVect/Raster + Vector: ""
+*PenBlueMode Rast/Raster Only: ""
+*PenBlueMode Vect/Vector Only: ""
+*PenBlueMode Skip/Skip: ""
+*CloseUI: *PenBlueMode
+
+*% ======== Fonts ========
+
+*DefaultFont: Courier
+*Font AvantGarde-Book: Standard "(001.006S)" Standard ROM
+*Font AvantGarde-BookOblique: Standard "(001.006S)" Standard ROM
+*Font AvantGarde-Demi: Standard "(001.007S)" Standard ROM
+*Font AvantGarde-DemiOblique: Standard "(001.007S)" Standard ROM
+*Font Bookman-Demi: Standard "(001.004S)" Standard ROM
+*Font Bookman-DemiItalic: Standard "(001.004S)" Standard ROM
+*Font Bookman-Light: Standard "(001.004S)" Standard ROM
+*Font Bookman-LightItalic: Standard "(001.004S)" Standard ROM
+*Font Courier: Standard "(002.004S)" Standard ROM
+*Font Courier-Bold: Standard "(002.004S)" Standard ROM
+*Font Courier-BoldOblique: Standard "(002.004S)" Standard ROM
+*Font Courier-Oblique: Standard "(002.004S)" Standard ROM
+*Font Helvetica: Standard "(001.006S)" Standard ROM
+*Font Helvetica-Bold: Standard "(001.007S)" Standard ROM
+*Font Helvetica-BoldOblique: Standard "(001.007S)" Standard ROM
+*Font Helvetica-Narrow: Standard "(001.006S)" Standard ROM
+*Font Helvetica-Narrow-Bold: Standard "(001.007S)" Standard ROM
+*Font Helvetica-Narrow-BoldOblique: Standard "(001.007S)" Standard ROM
+*Font Helvetica-Narrow-Oblique: Standard "(001.006S)" Standard ROM
+*Font Helvetica-Oblique: Standard "(001.006S)" Standard ROM
+*Font NewCenturySchlbk-Bold: Standard "(001.009S)" Standard ROM
+*Font NewCenturySchlbk-BoldItalic: Standard "(001.007S)" Standard ROM
+*Font NewCenturySchlbk-Italic: Standard "(001.006S)" Standard ROM
+*Font NewCenturySchlbk-Roman: Standard "(001.007S)" Standard ROM
+*Font Palatino-Bold: Standard "(001.005S)" Standard ROM
+*Font Palatino-BoldItalic: Standard "(001.005S)" Standard ROM
+*Font Palatino-Italic: Standard "(001.005S)" Standard ROM
+*Font Palatino-Roman: Standard "(001.005S)" Standard ROM
+*Font Symbol: Special "(001.007S)" Special ROM
+*Font Times-Bold: Standard "(001.007S)" Standard ROM
+*Font Times-BoldItalic: Standard "(001.009S)" Standard ROM
+*Font Times-Italic: Standard "(001.007S)" Standard ROM
+*Font Times-Roman: Standard "(001.007S)" Standard ROM
+*Font ZapfChancery-MediumItalic: Standard "(001.007S)" Standard ROM
+*Font ZapfDingbats: Special "(001.004S)" Standard ROM
+
+*% End of PPD file

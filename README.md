@@ -30,6 +30,8 @@ A native macOS driver and control application for Universal Laser Systems (ULS) 
 - **Image Density**: 8 levels for raster quality control
 - **Gas Assist Control**: Auto or Manual mode
 - **Settings Persistence**: Save/Load settings in .LAS format
+- **CUPS Virtual Printer**: Print directly from any macOS application (Rhino, Illustrator, etc.)
+- **Debug Panel**: Live device status, USB traffic logging, hex command console
 
 ## Building
 
@@ -56,8 +58,70 @@ make test
 # Install to /Applications
 sudo make install
 
+# Build CUPS backend
+make cups
+
+# Install CUPS virtual printer (requires sudo)
+sudo make install-cups
+
+# Uninstall CUPS virtual printer
+sudo make uninstall-cups
+
 # Clean build files
 make clean
+```
+
+## CUPS Virtual Printer Installation
+
+The CUPS virtual printer allows you to print directly from any macOS application
+(such as Rhino 3D, Adobe Illustrator, or any app that can print PDFs) to your
+ULS laser cutter.
+
+### Installation
+
+```bash
+# Build the CUPS backend
+make cups
+
+# Install the backend and register the printer (requires sudo)
+sudo make install-cups
+```
+
+After installation, a new printer named **"ULS VLS 6.0"** will appear in your
+macOS print dialog.
+
+### Usage
+
+1. In any application, select **File > Print**
+2. Choose **"ULS VLS 6.0"** as the printer
+3. Optionally configure pen settings in the print options
+4. Click **Print** to send the job to your laser
+
+### Print Options
+
+The PPD file supports these custom options:
+
+- **Print Mode**: Normal, Clipart, 3D, Rubber Stamp
+- **Image Density**: 1-8 (quality level)
+- **Per-color pen settings**: Power, Speed, PPI, Mode for each of 8 colors
+
+### Command Line Printing
+
+```bash
+# Print a PDF file directly
+lpr -P ULS_VLS_6.0 design.pdf
+
+# Print with custom options
+lpr -P ULS_VLS_6.0 -o power=75 -o speed=30 design.pdf
+
+# Check printer status
+lpstat -p ULS_VLS_6.0
+```
+
+### Uninstallation
+
+```bash
+sudo make uninstall-cups
 ```
 
 ## Usage
@@ -109,6 +173,9 @@ make clean
 # Save/Load settings
 ./build/uls-cli save-settings settings.las
 ./build/uls-cli load-settings settings.las
+
+# Live debug status monitoring
+./build/uls-cli debug
 ```
 
 ## API Usage
@@ -195,10 +262,15 @@ uls-mac-driver/
 │   ├── main.m             # App entry point
 │   ├── ULSAppDelegate.h/m
 │   ├── ULSMainWindowController.h/m
+│   ├── ULSDebugPanelController.h/m  # Debug panel (live status, USB log)
 │   ├── ULSSVGParser.h/m   # SVG import (all path commands)
 │   └── ULSPDFParser.h/m   # PDF import (Quartz CGPDFDocument)
+├── cups/
+│   ├── uls_cups_backend.c # CUPS backend for virtual printer
+│   └── ULS-VLS60.ppd      # PPD file for printer registration
 ├── scripts/
-│   └── gen_icon.py        # App icon generator (no deps)
+│   ├── gen_icon.py        # App icon generator (no deps)
+│   └── install_cups.sh    # CUPS installation script
 ├── Makefile
 └── README.md
 ```

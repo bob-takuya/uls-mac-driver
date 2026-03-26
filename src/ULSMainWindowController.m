@@ -7,6 +7,7 @@
 #import "ULSMainWindowController.h"
 #import "ULSSVGParser.h"
 #import "ULSPDFParser.h"
+#import "ULSDebugPanelController.h"
 #import <UniformTypeIdentifiers/UniformTypeIdentifiers.h>
 
 // Helper macro for Auto Layout
@@ -959,6 +960,11 @@ typedef NS_ENUM(NSInteger, ULSOperationState) {
     [self setupGlobalSettingsTab:globalTab];
     [self.settingsTabView addTabViewItem:globalTab];
 
+    NSTabViewItem *debugTab = [[NSTabViewItem alloc] initWithIdentifier:@"debug"];
+    debugTab.label = @"Debug";
+    [self setupDebugTab:debugTab];
+    [self.settingsTabView addTabViewItem:debugTab];
+
     return self.settingsTabView;
 }
 
@@ -1245,6 +1251,27 @@ typedef NS_ENUM(NSInteger, ULSOperationState) {
     ]];
 }
 
+#pragma mark - Debug Tab
+
+- (void)setupDebugTab:(NSTabViewItem *)tab {
+    NSView *container = tab.view;
+
+    /* Create the debug panel controller */
+    self.debugPanelController = [[ULSDebugPanelController alloc] init];
+
+    /* Add its view to the tab */
+    NSView *debugView = self.debugPanelController.view;
+    [container addSubview:debugView];
+
+    /* Constrain debug view to fill container */
+    [NSLayoutConstraint activateConstraints:@[
+        [debugView.topAnchor constraintEqualToAnchor:container.topAnchor],
+        [debugView.leadingAnchor constraintEqualToAnchor:container.leadingAnchor],
+        [debugView.trailingAnchor constraintEqualToAnchor:container.trailingAnchor],
+        [debugView.bottomAnchor constraintEqualToAnchor:container.bottomAnchor],
+    ]];
+}
+
 #pragma mark - UI State (with safety management)
 
 - (void)updateUIState {
@@ -1328,6 +1355,9 @@ typedef NS_ENUM(NSInteger, ULSOperationState) {
                                            selector:@selector(updatePosition:)
                                            userInfo:nil
                                             repeats:YES];
+            /* Update debug panel with device */
+            [self.debugPanelController setDevice:self.device];
+            [self.debugPanelController startAutoRefresh];
         }
         uls_free_device_list(devices, count);
     } else {
@@ -1352,6 +1382,10 @@ typedef NS_ENUM(NSInteger, ULSOperationState) {
     }
 
     if (self.device) {
+        /* Stop debug panel refresh before closing */
+        [self.debugPanelController stopAutoRefresh];
+        [self.debugPanelController setDevice:NULL];
+
         uls_close_device(self.device);
         self.device = NULL;
         self.isConnected = NO;

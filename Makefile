@@ -19,7 +19,7 @@ RESOURCES_DIR = $(CONTENTS_DIR)/Resources
 
 # Source files
 C_SOURCES = $(SRC_DIR)/uls_usb.c $(SRC_DIR)/uls_job.c
-OBJC_SOURCES = $(SRC_DIR)/main.m $(SRC_DIR)/ULSAppDelegate.m $(SRC_DIR)/ULSMainWindowController.m $(SRC_DIR)/ULSSVGParser.m $(SRC_DIR)/ULSPDFParser.m
+OBJC_SOURCES = $(SRC_DIR)/main.m $(SRC_DIR)/ULSAppDelegate.m $(SRC_DIR)/ULSMainWindowController.m $(SRC_DIR)/ULSSVGParser.m $(SRC_DIR)/ULSPDFParser.m $(SRC_DIR)/ULSDebugPanelController.m
 
 # Object files
 C_OBJECTS = $(patsubst $(SRC_DIR)/%.c,$(BUILD_DIR)/%.o,$(C_SOURCES))
@@ -34,7 +34,7 @@ TARGET = $(MACOS_DIR)/$(EXECUTABLE)
 CLI_SOURCES = $(SRC_DIR)/uls_usb.c $(SRC_DIR)/uls_job.c
 CLI_TARGET = $(BUILD_DIR)/uls-cli
 
-.PHONY: all clean app cli test install
+.PHONY: all clean app cli cups test install install-cups uninstall-cups help
 
 all: app cli
 
@@ -143,6 +143,27 @@ $(BUILD_DIR)/test_uls: $(SRC_DIR)/test_uls.c $(C_SOURCES) | $(BUILD_DIR)
 install: app
 	cp -R $(APP_DIR) /Applications/
 
+# CUPS backend
+CUPS_DIR = cups
+CUPS_BACKEND = $(BUILD_DIR)/uls
+CUPS_SOURCES = $(CUPS_DIR)/uls_cups_backend.c $(SRC_DIR)/uls_usb.c $(SRC_DIR)/uls_job.c
+CUPS_OBJC_SOURCES = $(SRC_DIR)/ULSPDFParser.m
+
+cups: $(CUPS_BACKEND)
+
+$(CUPS_BACKEND): $(CUPS_SOURCES) $(CUPS_OBJC_SOURCES) | $(BUILD_DIR)
+	$(OBJC) $(OBJCFLAGS) -framework IOKit -framework CoreFoundation -framework Quartz -framework Cocoa -o $@ $(CUPS_SOURCES) $(CUPS_OBJC_SOURCES)
+
+# Install CUPS backend and register printer
+install-cups: cups
+	@echo "Installing CUPS backend (requires root)..."
+	sudo ./scripts/install_cups.sh install
+
+# Uninstall CUPS backend and printer
+uninstall-cups:
+	@echo "Uninstalling CUPS backend (requires root)..."
+	sudo ./scripts/install_cups.sh uninstall
+
 # Clean build files
 clean:
 	rm -rf $(BUILD_DIR)
@@ -154,10 +175,13 @@ help:
 	@echo "Usage: make [target]"
 	@echo ""
 	@echo "Targets:"
-	@echo "  all      - Build both app and CLI (default)"
-	@echo "  app      - Build macOS application"
-	@echo "  cli      - Build command-line tool"
-	@echo "  test     - Build and run tests"
-	@echo "  install  - Install app to /Applications"
-	@echo "  clean    - Remove build files"
-	@echo "  help     - Show this help"
+	@echo "  all           - Build both app and CLI (default)"
+	@echo "  app           - Build macOS application"
+	@echo "  cli           - Build command-line tool"
+	@echo "  cups          - Build CUPS backend"
+	@echo "  test          - Build and run tests"
+	@echo "  install       - Install app to /Applications"
+	@echo "  install-cups  - Install CUPS backend and register printer (requires sudo)"
+	@echo "  uninstall-cups- Remove CUPS backend and printer (requires sudo)"
+	@echo "  clean         - Remove build files"
+	@echo "  help          - Show this help"
