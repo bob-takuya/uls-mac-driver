@@ -7,6 +7,8 @@
 #include "uls_usb.h"
 #include "uls_job.h"
 
+@class ULSDebugPanelController;
+
 @interface ULSMainWindowController : NSWindowController <NSWindowDelegate, NSTabViewDelegate>
 
 // Device connection
@@ -58,6 +60,9 @@
 // UI Elements - Focus / Z-Axis
 @property (strong, nonatomic) NSSlider *focusOffsetSlider;
 @property (strong, nonatomic) NSTextField *focusOffsetLabel;
+
+// Debug Panel
+@property (strong, nonatomic) ULSDebugPanelController *debugPanelController;
 
 // Actions
 - (IBAction)connectLaser:(id)sender;

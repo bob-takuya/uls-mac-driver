@@ -19,6 +19,7 @@
 #include <stdlib.h>
 #include <string.h>
 #include <unistd.h>
+#include <time.h>
 
 /* Global printer settings */
 static ULSPrinterSettings *gSettings = NULL;
@@ -39,6 +40,7 @@ static void print_usage(const char *program) {
     printf("  run <file>              Run job from SVG/PDF file\n");
     printf("  test                    Draw a test pattern\n");
     printf("  version                 Get firmware version\n");
+    printf("  debug                   Live debug status monitoring\n");
     printf("\n");
     printf("Pen Settings Commands:\n");
     printf("  pens                    Show all 8 pen color settings\n");
@@ -58,6 +60,7 @@ static void print_usage(const char *program) {
     printf("  %s pens\n", program);
     printf("  %s pen red 75 40 500\n", program);
     printf("  %s pen-mode red vect\n", program);
+    printf("  %s debug\n", program);
 }
 
 static ULSDevice* connect_first_device(void) {
@@ -512,6 +515,62 @@ static int cmd_load_settings(const char *filepath) {
     }
 }
 
+/* Live debug status monitoring */
+static int cmd_debug(void) {
+    ULSDevice *device = connect_first_device();
+    if (!device) return 1;
+
+    printf("\n");
+    printf("=== ULS Debug Mode ===\n");
+    printf("Press Ctrl+C to exit\n");
+    printf("\n");
+
+    /* Get initial info */
+    char version[64] = {0};
+    ULSError err = uls_get_firmware_version(device, version, sizeof(version));
+    if (err == ULS_SUCCESS) {
+        printf("Firmware: %s\n", version);
+    }
+    printf("Model: %s\n", uls_model_string(device->info.model));
+    printf("\n");
+
+    /* Live polling loop */
+    printf("%-12s %-10s %-10s %-10s %-15s\n",
+           "Time", "X (in)", "Y (in)", "Z (in)", "State");
+    printf("--------------------------------------------------------------\n");
+
+    while (1) {
+        float x = 0, y = 0, z = 0;
+        ULSDeviceState state = ULS_STATE_DISCONNECTED;
+
+        err = uls_get_position(device, &x, &y, &z);
+        uls_get_status(device, &state);
+
+        /* Get current time */
+        time_t now = time(NULL);
+        struct tm *tm_info = localtime(&now);
+        char time_str[16];
+        strftime(time_str, sizeof(time_str), "%H:%M:%S", tm_info);
+
+        /* Print status line (carriage return to overwrite) */
+        printf("\r%-12s %-10.3f %-10.3f %-10.3f %-15s",
+               time_str, x, y, z, uls_state_string(state));
+        fflush(stdout);
+
+        /* Check for disconnect */
+        if (err == ULS_ERROR_NOT_CONNECTED || err == ULS_ERROR_IO) {
+            printf("\n\nDevice disconnected!\n");
+            break;
+        }
+
+        /* Poll every 500ms */
+        usleep(500000);
+    }
+
+    uls_close_device(device);
+    return 0;
+}
+
 int main(int argc, char *argv[]) {
     if (argc < 2) {
         print_usage(argv[0]);
@@ -566,6 +625,8 @@ int main(int argc, char *argv[]) {
         result = cmd_test();
     } else if (strcmp(cmd, "version") == 0) {
         result = cmd_version();
+    } else if (strcmp(cmd, "debug") == 0) {
+        result = cmd_debug();
     } else if (strcmp(cmd, "pens") == 0) {
         result = cmd_pens();
     } else if (strcmp(cmd, "pen") == 0) {
