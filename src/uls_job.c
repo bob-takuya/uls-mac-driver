@@ -16,7 +16,20 @@
 #define INITIAL_PATH_CAPACITY 64
 #define INITIAL_JOB_CAPACITY 16
 
-/* Internal command codes for compiled job data */
+/*
+ * Internal command codes for compiled job data
+ *
+ * TODO (Windows Driver Audit):
+ * These command codes are ESTIMATED based on reverse engineering.
+ * The actual ULS protocol may use different opcodes. These need to be
+ * verified by capturing USB traffic from the Windows driver.
+ *
+ * Known issues:
+ * 1. Command format may include checksum bytes
+ * 2. Coordinate encoding may differ (fixed-point format, byte order)
+ * 3. Additional commands may be required (e.g., SET_Z, GAS_ASSIST, etc.)
+ * 4. Raster commands likely use RLE or other compression
+ */
 #define CMD_HEADER          0x00
 #define CMD_MOVE_ABS        0x01
 #define CMD_LINE_ABS        0x02
@@ -31,6 +44,12 @@
 #define CMD_RASTER_LINE     0x31
 #define CMD_RASTER_END      0x32
 #define CMD_JOB_END         0xFF
+
+/* TODO: Additional commands that may be needed (observed in Windows captures) */
+#define CMD_SET_Z           0x13  /* Z-axis / focus offset - format unknown */
+#define CMD_GAS_ASSIST_ON   0x22  /* Gas assist control - format unknown */
+#define CMD_GAS_ASSIST_OFF  0x23
+#define CMD_HOME_XY         0x24  /* Home before job - format unknown */
 
 /* Create a new job */
 ULSJob* uls_job_create(const char *name) {
@@ -410,7 +429,37 @@ static int32_t float_to_units(float value) {
     return (int32_t)(value * 1000.0f);  /* 1000 DPI native resolution */
 }
 
-/* Compile job to device commands */
+/*
+ * Compile job to device commands
+ *
+ * TODO (Windows Driver Audit - Job Compilation):
+ *
+ * The Windows ULS driver compilation flow:
+ * 1. Color separation: Input RGB is mapped to 8 pen colors
+ * 2. Vector detection: Thin strokes (hairlines < 0.001") -> VECT mode
+ * 3. Raster detection: Fills and thick strokes -> RAST mode
+ * 4. Pen mode determines processing:
+ *    - RAST_VECT: Fills rasterized, outlines vectorized
+ *    - RAST: Everything rasterized
+ *    - VECT: Only hairline vectors, fills skipped
+ *    - SKIP: Color ignored entirely
+ * 5. Job header with: magic, version, bounds, checksum, Z-offset
+ * 6. Binary command stream with proper checksums
+ *
+ * Current gaps:
+ * - No color separation from input (paths have fixed settings)
+ * - No vector vs raster detection based on stroke width
+ * - No pen mode processing (RAST_VECT/RAST/VECT/SKIP)
+ * - Job header format is guessed, may be incorrect
+ * - No checksum calculation
+ * - Z-axis/focus offset not included in job data
+ * - No initialization commands at job start
+ *
+ * This may cause:
+ * - Jobs rejected by device (bad header/checksum)
+ * - Incorrect cutting if Z-offset not sent
+ * - Color-coded designs not processed correctly
+ */
 ULSError uls_job_compile(ULSJob *job) {
     if (!job) return ULS_ERROR_INVALID_PARAM;
 
@@ -423,12 +472,27 @@ ULSError uls_job_compile(ULSJob *job) {
     size_t size = 0;
     uint8_t *buffer = (uint8_t *)malloc(capacity);
 
+    /*
+     * TODO: Send Z-axis/focus offset command at job start
+     * The Windows driver sends the material thickness + focus offset
+     * to position the Z-axis before cutting. Format unknown.
+     *
+     * Example (hypothetical):
+     * uint8_t zCmd[8];
+     * zCmd[0] = CMD_SET_Z;
+     * int32_t zUnits = float_to_units(job->settings.focusOffset);
+     * memcpy(&zCmd[4], &zUnits, 4);
+     * add_command(&buffer, &size, &capacity, CMD_SET_Z, zCmd+1, 7);
+     */
+
     /* Job header */
+    /* TODO: Verify header format matches what device expects */
     uint8_t header[16] = {0};
     header[0] = 'U';
     header[1] = 'L';
     header[2] = 'S';
     header[3] = 0x01;  /* Version */
+    /* TODO: Add job bounds, total size, checksum to header */
     add_command(&buffer, &size, &capacity, CMD_HEADER, header, sizeof(header));
 
     /* Process vector paths */
@@ -883,12 +947,58 @@ ULSError uls_job_send(ULSJob *job, ULSDevice *device) {
     return uls_send_job_data(device, job->compiledData, job->compiledDataSize);
 }
 
-/* Send and run job */
+/*
+ * Send and run job
+ *
+ * TODO (Windows Driver Audit - Job Execution):
+ *
+ * The Windows driver job execution flow:
+ * 1. Home the laser head (if configured)
+ * 2. Set Z-axis to material thickness + focus offset
+ * 3. Enable gas assist if configured
+ * 4. Send job data with handshaking
+ * 5. Send START_JOB command
+ * 6. Poll status continuously during execution
+ * 7. Handle pause/resume from user or device
+ * 8. Handle errors (lid open, limit switch, etc.)
+ * 9. Home after completion (if configured)
+ * 10. Disable gas assist
+ *
+ * Current implementation:
+ * - Sends job data
+ * - Sends START_JOB command
+ * - No polling, no error handling, no pause/resume
+ *
+ * Missing error recovery:
+ * - Device buffer full -> wait and retry
+ * - Lid open -> pause, wait for close, resume
+ * - E-stop -> abort job
+ * - Communication timeout -> retry or abort
+ */
 ULSError uls_job_run(ULSJob *job, ULSDevice *device) {
     ULSError err = uls_job_send(job, device);
     if (err != ULS_SUCCESS) return err;
 
-    return uls_start_job(device);
+    /* TODO: Add pre-job sequence:
+     * 1. Home if configured: uls_home(device);
+     * 2. Set Z-axis: send focus offset to device
+     * 3. Enable gas assist if configured
+     */
+
+    err = uls_start_job(device);
+
+    /* TODO: Add status polling loop:
+     * while (job_running) {
+     *     uls_get_status(device, &state);
+     *     if (state == ERROR) handle_error();
+     *     if (state == READY) break; // job complete
+     *     if (pause_requested) uls_pause_job(device);
+     *     report_progress();
+     *     usleep(100000); // 100ms poll interval
+     * }
+     */
+
+    return err;
 }
 
 /* Material presets */
@@ -1256,7 +1366,29 @@ const char* uls_print_mode_string(ULSPrintMode mode) {
     }
 }
 
-/* Color matching - find closest pen color for RGB */
+/*
+ * Color matching - find closest pen color for RGB
+ *
+ * TODO (Windows Driver Audit - Color Separation):
+ *
+ * The Windows driver color matching is more sophisticated:
+ * 1. Uses tolerance thresholds (not just nearest match)
+ * 2. Pure black (R=G=B<10) -> Black pen
+ * 3. Pure white (R=G=B>245) -> Skip (background)
+ * 4. Near-grayscale with low saturation -> Black or skip based on mode
+ * 5. Saturated colors matched to nearest pen with tolerance
+ *
+ * Current implementation uses simple Euclidean distance which may
+ * misclassify colors that should be skipped (background) or grouped
+ * together. This could cause:
+ * - Background elements being cut/engraved
+ * - Similar colors being processed with different pen settings
+ *
+ * The Windows driver also handles:
+ * - Alpha channel (transparent = skip)
+ * - Color profiles / gamma correction
+ * - Spot color matching for specific ULS materials
+ */
 ULSPenColor uls_match_color_to_pen(uint8_t r, uint8_t g, uint8_t b) {
     /* RGB values for the 8 standard pen colors */
     static const struct {
@@ -1271,6 +1403,13 @@ ULSPenColor uls_match_color_to_pen(uint8_t r, uint8_t g, uint8_t b) {
         {0, 255, 255},   /* Cyan */
         {255, 128, 0}    /* Orange */
     };
+
+    /*
+     * TODO: Add special case handling:
+     * - Pure white (R=G=B>245) should return a "skip" indicator
+     * - Near-grayscale should map to black
+     * - Add tolerance threshold for "close enough" matches
+     */
 
     int minDist = INT32_MAX;
     ULSPenColor closest = ULS_PEN_COLOR_BLACK;

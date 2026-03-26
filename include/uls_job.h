@@ -19,7 +19,21 @@ typedef enum {
     ULS_JOB_TYPE_COMBINED
 } ULSJobType;
 
-/* Pen Mode - Controls how each color is processed */
+/*
+ * Pen Mode - Controls how each color is processed
+ *
+ * TODO (Windows Driver Audit):
+ * These modes are defined but NOT YET IMPLEMENTED in job compilation.
+ * Currently all paths are treated as vectors regardless of pen mode.
+ *
+ * To properly implement:
+ * - RAST_VECT: Detect fills (closed paths) -> rasterize, outlines -> vector
+ * - RAST: Convert all paths to raster scanlines
+ * - VECT: Only process hairline strokes (< 0.001" width), skip fills
+ * - SKIP: Ignore elements with this color entirely
+ *
+ * This requires stroke width detection which is not currently tracked.
+ */
 typedef enum {
     ULS_PEN_MODE_RAST_VECT = 0,  /* Raster fills, Vector outlines (default) */
     ULS_PEN_MODE_RAST,           /* Raster everything (fills and outlines) */
