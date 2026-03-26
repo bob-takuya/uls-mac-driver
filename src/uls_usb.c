@@ -22,6 +22,10 @@ static CFRunLoopRef gRunLoop = NULL;
 static pthread_t gNotificationThread;
 static bool gNotificationThreadRunning = false;
 
+/* Private variables for USB traffic logging */
+static ULSUSBLogCallback gLogCallback = NULL;
+static void *gLogUserContext = NULL;
+
 /* Supported Product IDs */
 static const uint16_t gSupportedPIDs[] = {
     ULS_PID_PLS_BOOTLOADER,
@@ -177,6 +181,20 @@ void uls_free_device_list(ULSDeviceInfo *devices, int count) {
         free(devices);
     }
 }
+
+/*
+ * TODO (Windows Driver Audit):
+ * The Windows ULS driver performs an initialization sequence before accepting jobs:
+ * 1. Device reset command (vendor-specific control transfer)
+ * 2. Get device capabilities (bed size, laser type, dual beam support)
+ * 3. Firmware version check
+ * 4. Initial status query
+ *
+ * This macOS implementation opens the device but does not perform the init sequence.
+ * On first connection to a real device, we may need to send a reset/init command
+ * before the device will accept job data. The init command format is unknown and
+ * would need to be reverse-engineered from USB captures of the Windows driver.
+ */
 
 /* Open a ULS device */
 ULSDevice* uls_open_device(uint16_t vendorId, uint16_t productId) {
@@ -384,14 +402,22 @@ ULSError uls_bulk_write(ULSDevice *device, const uint8_t *data, size_t length, s
     kr = (*device->interface)->WritePipe(device->interface, device->bulkOutPipe,
                                           (void *)data, size);
 
+    ULSError result;
     if (kr == KERN_SUCCESS) {
         if (bytesWritten) *bytesWritten = length;
-        return ULS_SUCCESS;
+        result = ULS_SUCCESS;
     } else if (kr == kIOUSBTransactionTimeout) {
-        return ULS_ERROR_TIMEOUT;
+        result = ULS_ERROR_TIMEOUT;
     } else {
-        return ULS_ERROR_IO;
+        result = ULS_ERROR_IO;
     }
+
+    /* Invoke logging callback if registered */
+    if (gLogCallback) {
+        gLogCallback(ULS_LOG_DIR_OUT, data, length, result, gLogUserContext);
+    }
+
+    return result;
 }
 
 /* Bulk read */
@@ -410,14 +436,24 @@ ULSError uls_bulk_read(ULSDevice *device, uint8_t *buffer, size_t bufferSize, si
     kr = (*device->interface)->ReadPipe(device->interface, device->bulkInPipe,
                                          buffer, &size);
 
+    ULSError result;
+    size_t actualRead = 0;
     if (kr == KERN_SUCCESS) {
+        actualRead = size;
         if (bytesRead) *bytesRead = size;
-        return ULS_SUCCESS;
+        result = ULS_SUCCESS;
     } else if (kr == kIOUSBTransactionTimeout) {
-        return ULS_ERROR_TIMEOUT;
+        result = ULS_ERROR_TIMEOUT;
     } else {
-        return ULS_ERROR_IO;
+        result = ULS_ERROR_IO;
     }
+
+    /* Invoke logging callback if registered */
+    if (gLogCallback && actualRead > 0) {
+        gLogCallback(ULS_LOG_DIR_IN, buffer, actualRead, result, gLogUserContext);
+    }
+
+    return result;
 }
 
 /* Control transfer */
@@ -600,6 +636,26 @@ ULSError uls_stop_job(ULSDevice *device) {
     return uls_bulk_write(device, cmd, sizeof(cmd), &written);
 }
 
+/*
+ * TODO (Windows Driver Audit):
+ * The Windows driver performs the following during job transfer:
+ * 1. Sends JOB_START command with job header (size, checksum, etc.)
+ * 2. Waits for ACK from device
+ * 3. Sends data in 4096-byte chunks
+ * 4. Polls device status after each chunk to check for errors/pause
+ * 5. Sends JOB_END command when complete
+ * 6. Polls for job completion status
+ *
+ * This implementation sends raw data without:
+ * - Job header/checksum
+ * - ACK waiting between chunks
+ * - Status polling during transfer
+ * - Error recovery (pause/resume/retry)
+ *
+ * This may cause job failures on real hardware if the device expects
+ * the proper handshaking protocol.
+ */
+
 /* Send job data */
 ULSError uls_send_job_data(ULSDevice *device, const uint8_t *data, size_t length) {
     if (device == NULL || data == NULL) return ULS_ERROR_INVALID_PARAM;
@@ -617,6 +673,13 @@ ULSError uls_send_job_data(ULSDevice *device, const uint8_t *data, size_t length
         if (err != ULS_SUCCESS) return err;
 
         offset += written;
+
+        /*
+         * TODO: Add status polling here to check for:
+         * - Device buffer full (need to wait)
+         * - Pause requested by user
+         * - Error conditions
+         */
     }
 
     return ULS_SUCCESS;
@@ -903,4 +966,42 @@ void uls_unregister_hotplug_callback(void) {
     gHotplugCallback = NULL;
     gHotplugUserContext = NULL;
     gRunLoop = NULL;
+}
+
+/* ============================================
+ * USB Traffic Logging
+ * ============================================ */
+
+/* Set logging callback */
+void uls_set_log_callback(ULSUSBLogCallback callback, void *userContext) {
+    gLogCallback = callback;
+    gLogUserContext = userContext;
+}
+
+/* Clear logging callback */
+void uls_clear_log_callback(void) {
+    gLogCallback = NULL;
+    gLogUserContext = NULL;
+}
+
+/* Get human-readable command name from command byte */
+const char* uls_command_string(uint8_t commandByte) {
+    switch (commandByte) {
+        case ULS_CMD_STATUS:           return "STATUS";
+        case ULS_CMD_HOME:             return "HOME";
+        case ULS_CMD_MOVE:             return "MOVE";
+        case ULS_CMD_LASER_ON:         return "LASER_ON";
+        case ULS_CMD_LASER_OFF:        return "LASER_OFF";
+        case ULS_CMD_SET_POWER:        return "SET_POWER";
+        case ULS_CMD_SET_SPEED:        return "SET_SPEED";
+        case ULS_CMD_SET_PPI:          return "SET_PPI";
+        case ULS_CMD_START_JOB:        return "START_JOB";
+        case ULS_CMD_PAUSE_JOB:        return "PAUSE_JOB";
+        case ULS_CMD_RESUME_JOB:       return "RESUME_JOB";
+        case ULS_CMD_STOP_JOB:         return "STOP_JOB";
+        case ULS_CMD_GET_POSITION:     return "GET_POSITION";
+        case ULS_CMD_FIRMWARE_VERSION: return "FIRMWARE_VERSION";
+        case ULS_CMD_FIRMWARE_UPDATE:  return "FIRMWARE_UPDATE";
+        default:                       return NULL;  /* Unknown command */
+    }
 }

@@ -163,4 +163,33 @@ typedef void (*ULSDeviceCallback)(ULSDevice *device, bool connected, void *userC
 ULSError uls_register_hotplug_callback(ULSDeviceCallback callback, void *userContext);
 void uls_unregister_hotplug_callback(void);
 
+/* ============================================
+ * USB Traffic Logging Callback
+ * ============================================
+ * Register a callback to monitor all USB traffic.
+ * Used by debug panel for real-time traffic display.
+ */
+
+/* Log entry direction */
+typedef enum {
+    ULS_LOG_DIR_OUT = 0,    /* Data sent to device (TX) */
+    ULS_LOG_DIR_IN          /* Data received from device (RX) */
+} ULSLogDirection;
+
+/* USB traffic logging callback */
+typedef void (*ULSUSBLogCallback)(
+    ULSLogDirection direction,  /* TX or RX */
+    const uint8_t *data,        /* Raw data bytes */
+    size_t length,              /* Number of bytes */
+    ULSError result,            /* Operation result */
+    void *userContext           /* User-provided context */
+);
+
+/* Register/unregister logging callback */
+void uls_set_log_callback(ULSUSBLogCallback callback, void *userContext);
+void uls_clear_log_callback(void);
+
+/* Get human-readable command name from command byte */
+const char* uls_command_string(uint8_t commandByte);
+
 #endif /* ULS_USB_H */
