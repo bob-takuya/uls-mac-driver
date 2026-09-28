@@ -1,37 +1,49 @@
 # ULS Laser Control for macOS
 
-A native macOS driver and control application for Universal Laser Systems (ULS) laser cutters and engravers.
+An experimental, unofficial macOS app / CLI / CUPS backend for Universal Laser Systems (ULS) laser cutters, talking to the machine over USB via IOKit.
 
-## Supported Devices
+Mac から ULS レーザーカッターを直接動かすための非公式ドライバの試作（USB プロトコルは推測ベース・実機動作未確認）。
+
+## Status
+
+**Prototype / not working on real hardware yet.** The UI, file import and settings model are built, but the USB job protocol is a *guess*: opcodes, job header and handshake have not been verified against a real ULS machine or a USB capture of the Windows driver (see the `TODO (Windows Driver Audit)` blocks in `src/uls_job.c` and `src/uls_usb.c`). Do not expect a job sent from this tool to cut anything.
+
+✅ **Works (without hardware)**
+- Builds as a Cocoa app (`make app`), CLI (`make cli`) and CUPS backend (`make cups`) with only Xcode Command Line Tools
+- Hardware-free unit tests (`make test`, `src/test_uls.c`) for paths, bounds, job compile, pen settings, color matching, presets
+- GUI: SVG import (`ULSSVGParser.m`, NSXMLParser) and PDF import (`ULSPDFParser.m`, Quartz) with preview
+- 8-color pen mapping model (power / speed / PPI / mode per color) and save/load of settings to a `.las` file
+- Debug panel: USB device search, diagnostic checklist, TX/RX hex log, hex command console
+
+🚧 **Partial or rough**
+- USB device discovery/open by vendor ID `0x10C3` and a small table of product IDs (PLS / VLS 360 / ILS / VLS 230) — not confirmed on a real device
+- Job compilation: emits a self-invented binary stream (`'U','L','S'` header, opcodes `0x01`…`0xFF`); no checksum, bounds or Z-offset
+- Job run: sends data then START_JOB, with no ACK waiting, status polling, pause/resume or error recovery
+- Color → pen matching is plain nearest-RGB (no white/background skip, no tolerance)
+- Print mode, image density and gas-assist values are stored in settings but not encoded into the job stream
+
+📝 **Not implemented yet**
+- Verified ULS protocol (device init sequence, real opcodes, raster encoding) — needs a USB capture of the official driver
+- Raster engraving from the GUI (raster data structures exist in the C API only)
+- Vector-vs-raster separation by stroke width and pen modes RAST_VECT / RAST / VECT / SKIP during compilation
+- CLI `run` with real files: SVG import in C is a stub that adds a fixed 3"×2" rectangle; PDF import in C always returns an error
+- **CUPS printing**: the backend calls the C `uls_job_import_pdf()`, which is not implemented, so every print job currently fails at the parse step
+
+⚠️ **Known issues & limitations**
+- Untested on any physical ULS laser; supported-model list below reflects the product-ID table, not tested machines
+- macOS only (IOKit, Cocoa, Quartz)
+- CUPS install writes to system locations and needs `sudo`; uninstall with `sudo make uninstall-cups`
+- The `.las` file is this project's own format, not guaranteed compatible with the official ULS driver's files
+
+## Background
+
+Written in 2026-03 as an attempt to drive a ULS laser cutter directly from a Mac instead of going through the Windows-only official driver. Development stopped after the protocol audit showed the missing pieces listed above.
+
+## Target Devices (by USB product ID table, untested)
 
 - **PLS Series** (Platform Laser System)
-  - PLS 3.50, 4.60, 4.75, 6.60, 6.75, 6.120, 6.150
-- **VLS Series** (VersaLaser)
-  - VLS 230, 350, 360, 460, 660
+- **VLS Series** (VersaLaser) — VLS 230, VLS 360 family
 - **ILS Series** (Industrial Laser System)
-  - ILS 9.75, 9.150, 12.75, 12.150
-
-## Features
-
-- Native macOS application with modern UI
-- USB communication via IOKit framework
-- Vector path support (lines, bezier curves, arcs)
-- Raster image engraving
-- Material presets for common materials
-- Command-line interface for scripting
-- Real-time position monitoring
-- Job progress tracking
-- **8-Color Pen Mapping System**
-  - Black, Red, Green, Yellow, Blue, Magenta, Cyan, Orange
-  - Individual Power%, Speed%, PPI settings per color
-  - Pen modes: RAST/VECT, RAST, VECT, SKIP
-  - Automatic RGB color matching
-- **Print Modes**: Normal, Clipart, 3D, Rubber Stamp
-- **Image Density**: 8 levels for raster quality control
-- **Gas Assist Control**: Auto or Manual mode
-- **Settings Persistence**: Save/Load settings in .LAS format
-- **CUPS Virtual Printer**: Print directly from any macOS application (Rhino, Illustrator, etc.)
-- **Debug Panel**: Live device status, USB traffic logging, hex command console
 
 ## Building
 
@@ -43,140 +55,51 @@ A native macOS driver and control application for Universal Laser Systems (ULS) 
 ### Build Commands
 
 ```bash
-# Build everything (app + CLI)
-make all
-
-# Build only the macOS application
-make app
-
-# Build only the command-line tool
-make cli
-
-# Run tests
-make test
-
-# Install to /Applications
-sudo make install
-
-# Build CUPS backend
-make cups
-
-# Install CUPS virtual printer (requires sudo)
+make all            # app + CLI
+make app            # macOS application only (build/ULSLaserControl.app)
+make cli            # command-line tool only (build/uls-cli)
+make test           # hardware-free unit tests
+sudo make install   # install app to /Applications
+make cups           # CUPS backend (see Status: printing does not work yet)
 sudo make install-cups
-
-# Uninstall CUPS virtual printer
 sudo make uninstall-cups
-
-# Clean build files
 make clean
-```
-
-## CUPS Virtual Printer Installation
-
-The CUPS virtual printer allows you to print directly from any macOS application
-(such as Rhino 3D, Adobe Illustrator, or any app that can print PDFs) to your
-ULS laser cutter.
-
-### Installation
-
-```bash
-# Build the CUPS backend
-make cups
-
-# Install the backend and register the printer (requires sudo)
-sudo make install-cups
-```
-
-After installation, a new printer named **"ULS VLS 6.0"** will appear in your
-macOS print dialog.
-
-### Usage
-
-1. In any application, select **File > Print**
-2. Choose **"ULS VLS 6.0"** as the printer
-3. Optionally configure pen settings in the print options
-4. Click **Print** to send the job to your laser
-
-### Print Options
-
-The PPD file supports these custom options:
-
-- **Print Mode**: Normal, Clipart, 3D, Rubber Stamp
-- **Image Density**: 1-8 (quality level)
-- **Per-color pen settings**: Power, Speed, PPI, Mode for each of 8 colors
-
-### Command Line Printing
-
-```bash
-# Print a PDF file directly
-lpr -P ULS_VLS_6.0 design.pdf
-
-# Print with custom options
-lpr -P ULS_VLS_6.0 -o power=75 -o speed=30 design.pdf
-
-# Check printer status
-lpstat -p ULS_VLS_6.0
-```
-
-### Uninstallation
-
-```bash
-sudo make uninstall-cups
 ```
 
 ## Usage
 
 ### GUI Application
 
-1. Launch `ULS Laser Control.app`
-2. Click "Connect" to connect to your laser
+1. Launch the built app (`build/ULSLaserControl.app`)
+2. Click "Connect" (requires a ULS device on USB)
 3. Import an SVG or PDF file
-4. Adjust power, speed, and other settings
-5. Click "Start" to run the job
+4. Adjust power, speed and pen settings
+5. Click "Start" — note that the job format is unverified (see Status)
+
+The Debug panel is the most useful part today: it shows whether the device is found, which interface/endpoints open, and logs raw USB traffic.
 
 ### Command Line
 
 ```bash
-# List connected devices
-./build/uls-cli list
-
-# Get device status
-./build/uls-cli status
-
-# Home the laser head
-./build/uls-cli home
-
-# Move to position (in inches)
-./build/uls-cli move 5.0 3.0
-
-# Set laser power (0-100%)
-./build/uls-cli power 50
-
-# Set laser speed (0-100%)
-./build/uls-cli speed 50
-
-# Run a job from file
-./build/uls-cli run design.svg
-
-# Run test pattern
-./build/uls-cli test
-
-# Show all pen settings
-./build/uls-cli pens
-
-# Set pen color settings (power, speed, PPI)
-./build/uls-cli pen red 75 40 500
-
-# Set pen mode (rast-vect, rast, vect, skip)
-./build/uls-cli pen-mode red vect
-
-# Save/Load settings
+./build/uls-cli list                       # list connected devices
+./build/uls-cli status                     # device status
+./build/uls-cli home                       # home the head
+./build/uls-cli move 5.0 3.0               # move (inches)
+./build/uls-cli power 50                   # 0-100 %
+./build/uls-cli speed 50                   # 0-100 %
+./build/uls-cli test                       # send a test pattern
+./build/uls-cli pens                       # show pen settings
+./build/uls-cli pen red 75 40 500          # power, speed, PPI
+./build/uls-cli pen-mode red vect          # rast-vect | rast | vect | skip
 ./build/uls-cli save-settings settings.las
 ./build/uls-cli load-settings settings.las
-
-# Live debug status monitoring
-./build/uls-cli debug
+./build/uls-cli debug                      # live status monitor
+./build/uls-cli run design.svg             # currently sends a placeholder rectangle (C SVG import is a stub)
 ```
+
+### CUPS Virtual Printer (not functional yet)
+
+`sudo make install-cups` registers a printer named **"ULS VLS 6.0"** with a PPD exposing print mode, image density and per-color pen options. The backend is wired up, but PDF parsing from the C backend is not implemented, so jobs fail. Fixing this means linking the backend against `ULSPDFParser.m` instead of the C stub.
 
 ## API Usage
 
@@ -184,191 +107,63 @@ sudo make uninstall-cups
 #include "uls_usb.h"
 #include "uls_job.h"
 
-// Find and connect to device
 ULSDeviceInfo *devices;
 int count;
 uls_find_devices(&devices, &count);
-
 ULSDevice *device = uls_open_device(devices[0].vendorId, devices[0].productId);
 
-// Create a job
 ULSJob *job = uls_job_create("my_job");
-
-// Create a path (2" x 2" rectangle at position 1", 1")
 ULSVectorPath *path = uls_path_create();
-uls_path_set_laser(path, 50, 50, 500);  // power, speed, PPI
+uls_path_set_laser(path, 50, 50, 500);           // power, speed, PPI
 uls_path_add_rectangle(path, 1.0f, 1.0f, 2.0f, 2.0f);
 uls_job_add_path(job, path);
 
-// Run the job
-uls_job_run(job, device);
+uls_job_run(job, device);                        // protocol unverified
 
-// Cleanup
 uls_job_destroy(job);
 uls_close_device(device);
 ```
 
-### Using Printer Settings (8-Color Pen Mapping)
-
-```c
-#include "uls_job.h"
-
-// Create printer settings
-ULSPrinterSettings *settings = uls_printer_settings_create();
-
-// Configure red pen for cutting
-uls_pen_set_mode(settings, ULS_PEN_COLOR_RED, ULS_PEN_MODE_VECT);
-uls_pen_set_power(settings, ULS_PEN_COLOR_RED, 75);
-uls_pen_set_speed(settings, ULS_PEN_COLOR_RED, 40);
-uls_pen_set_ppi(settings, ULS_PEN_COLOR_RED, 500);
-
-// Configure blue pen for engraving
-uls_pen_set_mode(settings, ULS_PEN_COLOR_BLUE, ULS_PEN_MODE_RAST);
-uls_pen_set_power(settings, ULS_PEN_COLOR_BLUE, 30);
-uls_pen_set_speed(settings, ULS_PEN_COLOR_BLUE, 80);
-
-// Set global options
-settings->printMode = ULS_PRINT_MODE_NORMAL;
-settings->imageDensity = ULS_IMAGE_DENSITY_6;
-settings->gasAssistMode = ULS_GAS_ASSIST_AUTO;
-
-// Save to file
-uls_printer_settings_save(settings, "my_settings.las");
-
-// Load from file
-ULSPrinterSettings *loaded = uls_printer_settings_create();
-uls_printer_settings_load(loaded, "my_settings.las");
-
-// Match RGB color to closest pen
-ULSPenColor color = uls_match_color_to_pen(255, 0, 0);  // Returns ULS_PEN_COLOR_RED
-
-// Cleanup
-uls_printer_settings_destroy(settings);
-uls_printer_settings_destroy(loaded);
-```
+Pen settings: `uls_printer_settings_create()`, `uls_pen_set_mode/power/speed/ppi()`, `uls_printer_settings_save/load()`, `uls_match_color_to_pen(r, g, b)` — see `include/uls_job.h`.
 
 ## Project Structure
 
 ```
 uls-mac-driver/
-├── include/
-│   ├── uls_usb.h          # USB communication API
-│   └── uls_job.h          # Job processing API
+├── include/            uls_usb.h (USB API), uls_job.h (job / pen API)
 ├── src/
-│   ├── uls_usb.c          # USB implementation (IOKit)
-│   ├── uls_job.c          # Job processing implementation
-│   ├── uls_cli.c          # Command-line interface
-│   ├── test_uls.c         # Test suite
-│   ├── main.m             # App entry point
-│   ├── ULSAppDelegate.h/m
-│   ├── ULSMainWindowController.h/m
-│   ├── ULSDebugPanelController.h/m  # Debug panel (live status, USB log)
-│   ├── ULSSVGParser.h/m   # SVG import (all path commands)
-│   └── ULSPDFParser.h/m   # PDF import (Quartz CGPDFDocument)
-├── cups/
-│   ├── uls_cups_backend.c # CUPS backend for virtual printer
-│   └── ULS-VLS60.ppd      # PPD file for printer registration
-├── scripts/
-│   ├── gen_icon.py        # App icon generator (no deps)
-│   └── install_cups.sh    # CUPS installation script
-├── Makefile
-└── README.md
+│   ├── uls_usb.c       USB via IOKit
+│   ├── uls_job.c       job model + compiler (protocol TODOs documented here)
+│   ├── uls_cli.c       command-line tool
+│   ├── test_uls.c      hardware-free tests
+│   ├── main.m, ULSAppDelegate.*, ULSMainWindowController.*
+│   ├── ULSDebugPanelController.*   debug / diagnostics panel
+│   ├── ULSSVGParser.*  SVG import (GUI)
+│   └── ULSPDFParser.*  PDF import (GUI, Quartz)
+├── cups/               uls_cups_backend.c, ULS-VLS60.ppd
+├── scripts/            gen_icon.py, install_cups.sh
+└── Makefile
 ```
 
-## Technical Details
+## Technical Notes
 
-### USB Communication
+- USB bulk transfers via IOKit USBLib, vendor ID `0x10C3`
+- Coordinates in inches, origin top-left, Y down, internal resolution 1000 DPI
+- The command codes and header in `uls_job.c` are placeholders pending a protocol capture
 
-The driver communicates with ULS devices via USB bulk transfers:
-- Vendor ID: 0x10C3
-- Uses IOKit USBLib for macOS USB access
-- Bulk OUT endpoint for commands and job data
-- Bulk IN endpoint for status and position
+## Related
 
-### Coordinate System
+Part of a small series of Mac tools for fabrication machines by the same author:
 
-- All coordinates are in inches
-- Origin (0, 0) is at the top-left corner
-- X increases to the right
-- Y increases downward
-- Internal resolution: 1000 DPI
+- [neje_controller](https://github.com/bob-takuya/neje_controller) — Tauri controller for NEJE laser engraver + Silhouette CAMEO 5
+- [cameo-cut](https://github.com/bob-takuya/cameo-cut) — Python/PyQt6 controller for Silhouette Cameo 5
 
-### Job Format
+## Safety
 
-Jobs are compiled to a binary format:
-- Header with job metadata
-- Laser parameter commands (power, speed, PPI)
-- Path commands (move, line, bezier, arc)
-- Raster data (for image engraving)
-- Job end marker
-
-## Safety Notes
-
-**WARNING: Laser cutters are dangerous equipment. Always:**
-
-- Wear appropriate eye protection
-- Never leave the laser running unattended
-- Ensure proper ventilation
-- Keep a fire extinguisher nearby
-- Follow all manufacturer safety guidelines
+Laser cutters are Class 4 laser devices. Wear eye protection, never leave the machine unattended, ensure ventilation and keep a fire extinguisher nearby. Sending unverified commands to a laser can cause unexpected motion or firing.
 
 ## License
 
-### This Project
+MIT — see [LICENSE](LICENSE).
 
-Copyright (c) 2026 Contributors
-
-Permission is hereby granted, free of charge, to any person obtaining a copy
-of this software and associated documentation files (the "Software"), to deal
-in the Software without restriction, including without limitation the rights
-to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
-copies of the Software, and to permit persons to whom the Software is
-furnished to do so, subject to the following conditions:
-
-The above copyright notice and this permission notice shall be included in all
-copies or substantial portions of the Software.
-
-**THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
-IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
-FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
-AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
-LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
-OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
-SOFTWARE.**
-
-This project is licensed under the **MIT License**.
-
-### Third-Party Rights
-
-- **Universal Laser Systems, Inc.** — ULS, PLS, VLS, and ILS are trademarks of
-  Universal Laser Systems, Inc. The ULS USB protocol was determined by
-  observation and is not based on any proprietary source code or documentation.
-  This project is **not affiliated with, endorsed by, or supported by** Universal
-  Laser Systems, Inc.
-
-- **Apple, Inc.** — macOS, IOKit, PDFKit, Quartz, Cocoa, and related frameworks
-  are property of Apple Inc. Use of these frameworks is subject to Apple's
-  developer license terms.
-
-- **PDF format** — The Portable Document Format (PDF) is an open ISO standard
-  (ISO 32000). PDF parsing in this project uses Apple's `Quartz` framework only
-  (no third-party PDF libraries).
-
-### Disclaimer
-
-This is an unofficial, community-developed driver. It is **not endorsed by or
-affiliated with Universal Laser Systems, Inc.** Use of this software:
-
-- May void your device warranty
-- Is entirely at your own risk
-- Is not a substitute for proper training and safety procedures
-
-The authors and contributors accept **no liability** for any damage to equipment,
-data loss, personal injury, or any other harm resulting from the use of this
-software. Always follow the safety guidelines provided by the manufacturer of
-your laser cutter.
-
-> **⚠️ Safety Notice:** Laser cutters are Class 4 laser devices. Improper
-> operation can cause serious injury, fire, or death. Always operate within a
-> properly ventilated enclosure, wear appropriate eye protection, and comply with
-> all applicable local regulations.
+ULS, PLS, VLS and ILS are trademarks of Universal Laser Systems, Inc. This is an unofficial project, not affiliated with, endorsed by or supported by Universal Laser Systems, Inc. It is not based on any proprietary source code or documentation. Use entirely at your own risk; the authors accept no liability for damage to equipment or injury.
