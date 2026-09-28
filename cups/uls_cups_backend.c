@@ -17,7 +17,7 @@
  * Install:
  *   sudo make install-cups
  *
- * Copyright (c) 2026 Contributors - MIT License
+ * Copyright (c) 2026 bob-takuya - MIT License
  */
 
 #include <stdio.h>

@@ -8,7 +8,7 @@
 # Usage:
 #   sudo ./scripts/install_cups.sh [install|uninstall]
 #
-# Copyright (c) 2026 Contributors - MIT License
+# Copyright (c) 2026 bob-takuya - MIT License
 #
 
 set -e

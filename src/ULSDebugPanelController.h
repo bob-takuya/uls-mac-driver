@@ -8,7 +8,7 @@
  * - Live Status Bar: Continuous position/state polling
  * - Run Diagnostics: Sequential test with exportable report
  *
- * Copyright (c) 2026 Contributors - MIT License
+ * Copyright (c) 2026 bob-takuya - MIT License
  */
 
 #import <Cocoa/Cocoa.h>

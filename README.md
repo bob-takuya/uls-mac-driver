@@ -8,28 +8,28 @@ Mac から ULS レーザーカッターを直接動かすための非公式ド�
 
 **Prototype / not working on real hardware yet.** The UI, file import and settings model are built, but the USB job protocol is a *guess*: opcodes, job header and handshake have not been verified against a real ULS machine or a USB capture of the Windows driver (see the `TODO (Windows Driver Audit)` blocks in `src/uls_job.c` and `src/uls_usb.c`). Do not expect a job sent from this tool to cut anything.
 
-✅ **Works (without hardware)**
+**Works (without hardware)**
 - Builds as a Cocoa app (`make app`), CLI (`make cli`) and CUPS backend (`make cups`) with only Xcode Command Line Tools
 - Hardware-free unit tests (`make test`, `src/test_uls.c`) for paths, bounds, job compile, pen settings, color matching, presets
 - GUI: SVG import (`ULSSVGParser.m`, NSXMLParser) and PDF import (`ULSPDFParser.m`, Quartz) with preview
 - 8-color pen mapping model (power / speed / PPI / mode per color) and save/load of settings to a `.las` file
 - Debug panel: USB device search, diagnostic checklist, TX/RX hex log, hex command console
 
-🚧 **Partial or rough**
+**Partial or rough**
 - USB device discovery/open by vendor ID `0x10C3` and a small table of product IDs (PLS / VLS 360 / ILS / VLS 230) — not confirmed on a real device
 - Job compilation: emits a self-invented binary stream (`'U','L','S'` header, opcodes `0x01`…`0xFF`); no checksum, bounds or Z-offset
 - Job run: sends data then START_JOB, with no ACK waiting, status polling, pause/resume or error recovery
 - Color → pen matching is plain nearest-RGB (no white/background skip, no tolerance)
 - Print mode, image density and gas-assist values are stored in settings but not encoded into the job stream
 
-📝 **Not implemented yet**
+**Not implemented yet**
 - Verified ULS protocol (device init sequence, real opcodes, raster encoding) — needs a USB capture of the official driver
 - Raster engraving from the GUI (raster data structures exist in the C API only)
 - Vector-vs-raster separation by stroke width and pen modes RAST_VECT / RAST / VECT / SKIP during compilation
 - CLI `run` with real files: SVG import in C is a stub that adds a fixed 3"×2" rectangle; PDF import in C always returns an error
 - **CUPS printing**: the backend calls the C `uls_job_import_pdf()`, which is not implemented, so every print job currently fails at the parse step
 
-⚠️ **Known issues & limitations**
+**Known issues & limitations**
 - Untested on any physical ULS laser; supported-model list below reflects the product-ID table, not tested machines
 - macOS only (IOKit, Cocoa, Quartz)
 - CUPS install writes to system locations and needs `sudo`; uninstall with `sudo make uninstall-cups`

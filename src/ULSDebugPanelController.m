@@ -2,7 +2,7 @@
  * ULS Debug Panel Controller - Enhanced Diagnostics Implementation
  * Comprehensive device debugging and first-connection diagnostics
  *
- * Copyright (c) 2026 Contributors - MIT License
+ * Copyright (c) 2026 bob-takuya - MIT License
  */
 
 #import "ULSDebugPanelController.h"
